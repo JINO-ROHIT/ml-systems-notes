@@ -88,3 +88,10 @@ the best thing to do would be to trace just a single sufficiently complex operat
 
 happy reading!
 
+
+further reading
+1. fx graph paper - https://arxiv.org/pdf/2112.08429
+2. fx graph documentation - https://docs.pytorch.org/docs/2.12/fx.html
+3. torch compile manual - https://docs.google.com/document/d/1y5CRfMLdwEoF1nTk9q8qEu1mgMUuUtvhklPKJ2emLU8/edit?tab=t.0#heading=h.ivdr7fmrbeab
+4. https://dev-discuss.pytorch.org/t/what-and-why-is-torch-dispatch/557
+5. https://docs.pytorch.org/functorch/nightly/notebooks/aot_autograd_optimizations.html
