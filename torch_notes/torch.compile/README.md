@@ -26,11 +26,3 @@ this is the overall flow for the torch compile stack from my understanding -
 #### graph breaks
 
 The graph break is one of the most fundamental concepts within torch.compile. It allows torch.compile to handle arbitrary Python code by interrupting compilation, running the unsupported code, then resuming compilation. The term “graph break” comes from the fact that torch.compile attempts to capture and optimize the PyTorch operation graph. When unsupported Python code is encountered, then this graph must be “broken”. Graph breaks result in lost optimization opportunities, which may still be undesirable, but this is better than silent incorrectness or a hard crash.
-
-
-
-
-resources - 
-1. fx graph paper - https://arxiv.org/pdf/2112.08429
-2. fx graph documentation - https://docs.pytorch.org/docs/2.12/fx.html
-torch compile manual - https://docs.google.com/document/d/1y5CRfMLdwEoF1nTk9q8qEu1mgMUuUtvhklPKJ2emLU8/edit?tab=t.0#heading=h.ivdr7fmrbeab
