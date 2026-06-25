@@ -95,3 +95,4 @@ further reading
 3. torch compile manual - https://docs.google.com/document/d/1y5CRfMLdwEoF1nTk9q8qEu1mgMUuUtvhklPKJ2emLU8/edit?tab=t.0#heading=h.ivdr7fmrbeab
 4. https://dev-discuss.pytorch.org/t/what-and-why-is-torch-dispatch/557
 5. https://docs.pytorch.org/functorch/nightly/notebooks/aot_autograd_optimizations.html
+6. https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/torch.compiler_dynamo_deepdive.html#dynamo-deep-dive
