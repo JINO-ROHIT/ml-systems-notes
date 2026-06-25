@@ -96,3 +96,7 @@ further reading
 4. https://dev-discuss.pytorch.org/t/what-and-why-is-torch-dispatch/557
 5. https://docs.pytorch.org/functorch/nightly/notebooks/aot_autograd_optimizations.html
 6. https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/torch.compiler_dynamo_deepdive.html#dynamo-deep-dive
+7. https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/compile/programming_model.graph_breaks_index.html
+8. https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/torch.compiler_faq.html
+9. https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/torch.compiler_faq.html
+
