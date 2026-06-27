@@ -1,3 +1,3 @@
 ### what are fx graphs?
 
-<> link my blog here for detailed notes.
+my blog link - https://jino-rohit.github.io/blogs/12_fx_graphs.html
