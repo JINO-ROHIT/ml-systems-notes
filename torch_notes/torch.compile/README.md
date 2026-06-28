@@ -38,7 +38,6 @@ The graph break is one of the most fundamental concepts within torch.compile. It
 4. where to apply torch compile -
     - ideally at the highest level so it more oppurtinity to fuse things, remove redundant work, reduce kernel launches etc
 5. use torch dynamo disable when you have a piece of code that is difficult or impossible to compile, but you still want the rest of your program to benefit from torch.compile. it does also cause graph breaks but the different is no dynamo recompilation wasted + no weird logs and errors. you already know ahead of time i dont want to waste time compiling this.
-6. not all ops can be fused, pointwise ops yeah but hard for reduction kernels.
+6. not all ops can be fused, pointwise ops yeah also for reduction kernels but is a bit harder compared to pointwise.
 7. too much of fusion can be a bad thing if theres too much of a register presssure.
 8. reduce overhead by using cuda graphs, that does the capture and replay, helps in case you have too many kernels. this is because every kernel from the host have to invoke device, setup data + cuda stream + transfer data etc
-9.
