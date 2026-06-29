@@ -41,3 +41,24 @@ The graph break is one of the most fundamental concepts within torch.compile. It
 6. not all ops can be fused, pointwise ops yeah also for reduction kernels but is a bit harder compared to pointwise.
 7. too much of fusion can be a bad thing if theres too much of a register presssure.
 8. reduce overhead by using cuda graphs, that does the capture and replay, helps in case you have too many kernels. this is because every kernel from the host have to invoke device, setup data + cuda stream + transfer data etc
+
+
+#### aten vs core aten vs prim ops
+
+1. aten - aten seems to be the standard aten op set which is user facing like linear, conv, embedding etc.
+you can do a quick search and verify from this list - https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml
+
+
+2. core aten - a small more concentrated subset of aten ops that native aten ops can be decomposed into. the problem is aten have over 2k+ ops which are usually just variations of a single op. so we need a standard set of minimal ops that every model can be decomposed into.
+you can find the list here - https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/torch.compiler_ir.html
+you can find a relevant discussion here - https://dev-discuss.pytorch.org/t/defining-the-core-aten-opset/1464
+
+3. prim ops - this is the lowest level and has atomic ops like prim.add, prim.mul etc
+you can find the list here - https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/torch.compiler_ir.html
+
+
+the heirachy kinda looks like this -
+
+```
+aten(full set) --> decomposes to core aten(smaller subset) --> decomposes to prim ops(atomic ops)
+```
