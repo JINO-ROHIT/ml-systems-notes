@@ -99,4 +99,7 @@ further reading
 7. https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/compile/programming_model.graph_breaks_index.html
 8. https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/torch.compiler_faq.html
 9. https://docs.pytorch.org/docs/2.12/user_guide/torch_compiler/torch.compiler_faq.html
+10. https://docs.pytorch.org/functorch/stable/notebooks/aot_autograd_optimizations.html#recomputation-aka-activation-checkpointing
+11. https://dev-discuss.pytorch.org/t/min-cut-optimal-recomputation-i-e-activation-checkpointing-with-aotautograd/467
+12. https://dev-discuss.pytorch.org/t/what-and-why-is-torch-dispatch/557
 
