@@ -49,3 +49,5 @@ gm = torch.fx.symbolic_trace(MyModel())
 gm.graph.print_tabular()
 
 print(gm.graph)
+
+print(gm.code) # prints the actual code
