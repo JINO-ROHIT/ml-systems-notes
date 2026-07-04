@@ -44,3 +44,7 @@ this is usually where the slow down happens and you need to be very careful to h
 by default, TorchDynamo uses static shape mode, where the tensor's shape and stride are recorded when capturing the computation graph. at the end of the computation graph capture , the guards generated check if the input information in the computation graph has changed . if no changes have occurred, the already compiled computation graph is reused; otherwise, the computation graph is recaptured and recompiled (graph recompilation). from the second time, the static shape is now captured in dynamic shape mode.
 
 If you know that a dimension will vary in size, you can mark it as dynamic by calling torch._dynamo.mark_dynamic before calling torch.compile. This will avoid the first compilation with a static shape
+
+
+
+my personal blog version - https://jino-rohit.github.io/blogs/13_dynamo.html
