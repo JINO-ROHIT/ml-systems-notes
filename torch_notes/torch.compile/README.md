@@ -28,13 +28,21 @@ this is the overall flow for the torch compile stack from my understanding -
 The graph break is one of the most fundamental concepts within torch.compile. It allows torch.compile to handle arbitrary Python code by interrupting compilation, running the unsupported code, then resuming compilation. The term “graph break” comes from the fact that torch.compile attempts to capture and optimize the PyTorch operation graph. When unsupported Python code is encountered, then this graph must be “broken”. Graph breaks result in lost optimization opportunities, which may still be undesirable, but this is better than silent incorrectness or a hard crash.
 
 
-1. use fullgraph=True to identify and eliminate graph breaks. use also dynamo explain
+i put together a small guide/steps on how to use torch compile more effectively on your models -
+
+torch compile is faster mainly due to two things -
+- operator fusion
+- the use of cuda graphs
+
+always remember this two points and see where it would be applicable to use them.
+
+1. ensure your code is correct before using torch compile.
+1. use fullgraph=True to identify and eliminate graph breaks. use also dynamo explain and torch logs extensively
 2. you dont have to compile all the code, for example not worth compiling the data loading logic, disk IO etc.
 3. common graph breaks cause -
     - incorrect code - turn off compile and check for correctness
-    - data dependent code - if your control flow doesn’t actually depend on data values, consider modifying your code to perform control flow on constants.
-    - use torch.cond control flows
-    - print() logs will result in graph break. 
+    - data dependent code - if your control flow doesn’t actually depend on data values, consider modifying your code to perform control flow on constants. use torch.cond control
+    - python code with side-effects like opening file, print() logs will result in graph break. 
 4. where to apply torch compile -
     - ideally at the highest level so it more oppurtinity to fuse things, remove redundant work, reduce kernel launches etc
 5. use torch dynamo disable when you have a piece of code that is difficult or impossible to compile, but you still want the rest of your program to benefit from torch.compile. it does also cause graph breaks but the different is no dynamo recompilation wasted + no weird logs and errors. you already know ahead of time i dont want to waste time compiling this.
