@@ -27,6 +27,15 @@ no, cuda graphs are useful only at specific places and you need to be thoughtful
 3. because it is a DAG which is a fixed structure, all the nodes and dependenecies, shapes and sizes need to be fixed during recording time. you can change them after. 
 
 
+constraints for cuda graphs
+
+cUDA gaphs rely on the asynchronous execution model, where the cpu submits work to the gpu and continues without waiting for completion.
+
+1. operations that synchronize the cpu with the cpu are prohibited during stream capture.
+2. graph capture must occur on a non default stream. The default stream (stream 0) has special semantics with implicit synchronization behavior that conflicts with graph capture requirements.
+3. must have a static graph with fixed set of ops and dependecies and cannot change later.
+4. cpu code is not captured.
+
 now stage do you think is it more applicable to use cuda graphs? prefill or decode?
 
 decode! 
@@ -34,7 +43,7 @@ decode!
 1. if you remember in prefill, you can get varying sequence length of the input from different users. but for decode, the output length token is always 1.
 in both cases the batch sizes keep changing, so the inference engine usually captures multiple versions of the graph at different batch sizes. at runtime,  it simply pads to the nearest batch size and generates tokens. 
 2. the computations itself are quite heavy in prefill compared to decode, so there isnt a way to guarantee if adding cuda graphs is going to help much.
-
+(this isnt entirely true)
 
 
 what if we wanted to support for prefill?
