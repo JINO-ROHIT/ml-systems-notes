@@ -1,5 +1,8 @@
 ### understanding AOTautograd in pytorch
 
+
+blog version with more details - https://jino-rohit.github.io/blogs/14_aot_autograd.html
+
 before the whole 2.0 ecosystem existed, users could capture the forward graph using torchfx tracing.
 but although, each operator had its own forward and backward implementation,  users could not directly optimize on the backward graph, nor could they merge the forward and backward propagation computation graphs into a single computation graph.
 
