@@ -91,3 +91,50 @@ curl http://localhost:8000/v1/chat/completions \
 ```
 
 
+steps to serve non kubernetes local path to run `Qwen/Qwen3-0.6B` with dynamo + sglang for pd disagg( need 2 gpus)
+
+same setup as above
+
+## sglang prefill worker
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python -m dynamo.sglang \
+  --discovery-backend file \
+  --model Qwen/Qwen3-0.6B \
+  --disaggregation-mode prefill \
+  --disaggregation-transfer-backend nixl
+```
+(you can also use mooncake here)
+
+
+## sglang decode worker
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m dynamo.sglang \
+  --model Qwen/Qwen3-0.6B \
+  --discovery-backend file
+  --disaggregation-mode decode \
+  --disaggregation-transfer-backend nixl
+```
+
+
+## dynamo frontend
+
+
+```bash
+python3 -m dynamo.frontend \
+  --discovery-backend file \
+  --http-port 8000
+```
+
+## test
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-0.6B",
+    "messages": [{"role": "user", "content": "Write a one-sentence recipe for tea."}],
+    "max_tokens": 64
+  }'
+```
