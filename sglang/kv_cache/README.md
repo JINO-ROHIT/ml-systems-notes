@@ -1,23 +1,5 @@
 ## sglang kv cache 
 
-the implementation mainly has two structures -
-1. memory pool (python/sglang/srt/mem_cache/memory_pool.py)
-2. radix cache
-
-
-#### memory pool
-
-this maps each request to its token locations in the kv cache. it allocates a [size+1, max_context_len] int32 tensor (req_to_token).
-main classes -
-1. ReqToTokenPool - this maps each request to a request pool
-2. MHATokenToKVPool - this holds the physical K/V cache tensors on GPU
-
-
-#### radix cache
-
-inserts node ino the radix tree and keep splitting depending on the prefix found or if a new node needs to be constructed.
-
-
 #### do you really understand kv cache?
 
 for every token processed by an llm, it generates two main tensors -
@@ -249,3 +231,39 @@ okay this is cool, what about partial pages? can they be used by new requests?
 no they cannot! these remaining slots for the partial pages are usually for the newer tokens generated during decode to be stored.
 
 and when the tokens generated exceeded the current allocated slot in the page, a newer page is allocated for the next tokens to be stored.
+
+
+## add radix cache here
+
+
+particularly effective in the following scenarios - 
+1. shared system prompt - A large number of requests reuse the same system prompt.
+2. multi turn dialogue - multiple turns of the same conversation naturally share historical context.
+3. ai coding - in code completion scenarios, multiple requests for the same file share a large amount of code context.
+
+everything aimed to reduce TTFT.
+
+## hicache
+
+with the rise of agentic inference workloads, there also is explosion of context windows, constant interaction and streaming of million of tokens across
+codebases etc. this all puts pressure on the kv cache stored in gpu memory and at a point the existing vram isnt enough.
+
+hicache tries to unify gpu memory, host memory(RAM) and also disk memory(SSD) local disks into a unified cache hierarchy. through intelligent scheduling and asynchronous prefetching mechanisms, it retains frequently accessed hot data in the smaller VRAM while offloading cold data to a larger lower-level storage, loading it back into gpu memory for computation before requests arrive.
+
+typically every request needs to go through the entire process of "waiting --> prefix matching --> gpu memory allocation --> prefill calculation" to generate its first token. the hicache mode achieves two key optimizations by introducing a three-layer storage architecture and asynchronous pipeline:
+
+1. prefetching and waiting in parallel
+
+when a request is spawned, prefetch_from_storage is triggered. during the waiting period, the background thread asynchronously loads the kv data that is hit in storage into the host memory, effectively utilizing the "idle" time while waiting in the queue.
+
+when the Scheduler receives a request, it terminates the request prefetch or skips the request scheduling based on the scheduling policy. supported scheduling policies:
+
+- best_effort: try your best. When a request r is scheduled, if r is still in prefetch, then r is terminated and scheduling enters inference.
+- timeout: terminate requests based on estimated timeout. When a request r is scheduled, if r is still in prefetch and the timeout exceeds a predefined threshold, then r is terminated; otherwise, the scheduling of r is skipped and no inference is performed in this round.
+- wait_complete: prefetch all kvcache entries before entering inference scheduling. otherwise, skip it.
+
+2. loading and computation overlap
+
+when a request is scheduled for execution, KV loading from host to gpu is performed layer by layer through an independent cuda stream. forward computation of the model can begin immediately after the KV of the i-th layer is ready, without waiting for all layers to be loaded, thus achieving pipeline overlap between computation and transmission.
+
+this design hides the originally blocking I/O overhead within scheduling waits and GPU computation, significantly expanding the effective cache capacity while minimizing the impact on first token latency (TTFT).
