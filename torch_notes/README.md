@@ -102,4 +102,4 @@ further reading
 10. https://docs.pytorch.org/functorch/stable/notebooks/aot_autograd_optimizations.html#recomputation-aka-activation-checkpointing
 11. https://dev-discuss.pytorch.org/t/min-cut-optimal-recomputation-i-e-activation-checkpointing-with-aotautograd/467
 12. https://dev-discuss.pytorch.org/t/what-and-why-is-torch-dispatch/557
-
+13. https://pytorch.org/blog/why-is-pytorch-compile-so-fast-kernel-fusion/
