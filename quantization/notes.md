@@ -479,3 +479,12 @@ to
 
 good lecture -https://www.youtube.com/watch?v=6wEVz0wkhCM
 
+
+
+6. quantization of kv cache
+
+quantizing the kv cache helps reduce gpu memory overhead and supports longer sequence lengths, making it suitable for long sequence inference scenarios.
+
+
+reading
+1. https://docs.vllm.ai/projects/llm-compressor/en/latest/steps/choosing-scheme/
