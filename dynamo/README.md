@@ -172,3 +172,89 @@ for throughput-oriented apps -
 - a config like 3 prefill : 1 decode can make sense.
 
 so the right ratio comes from traffic and sla, not a fixed rule.
+
+
+
+### 2. kv aware routing
+
+kv cache routing is a technique that nvidia dynamo uses to routes requests between different workers by understanding where kv cache already exists to maximize cache hits. (it also takes other criteria into consideration as well which we will see in a bit)
+
+why kv cache routing is needed
+
+imagine you have 20 gpu worker each with its own kv cache.
+
+for a new incoming request, which worker should the request actually be routed to?
+
+1. if the router sends a request to the wrong worker, it misses a chance to reuse cached kv blocks.
+2. if the router only chases cache hits, a few workers can become overloaded.
+
+so the router needs to balance cache reuse and load.
+
+the ideal router has a global view of -
+- which workers have matching kv blocks.
+- how full each worker's gpu cache is.
+- how many requests are waiting on each worker.
+- how many active blocks each worker is decoding.
+
+
+
+so typically inside a single worker, this is what the kv cache reuse looks like -
+1. tokenize the input prompt.
+2. split tokens into fixed size blocks, like 16 or 64 tokens.
+3. hash each block to create a block id.
+4. look up each block in the local kv cache.
+5. reuse matching blocks if they exist.
+6. allocate memory for missing blocks.
+7. evict older / less useful blocks if gpu memory is full.
+8. compute key and value tensors for new blocks.
+9. store the new kv tensors in cache.
+
+dynamo hooks in this stage and keeps a track of the global state of each kv blocks.
+- when a kv block is stored, it emits a kv stored event.
+- when a kv block is removed, it emits a kv removed event.
+- kvindexer consumes these events and maintains a global prefix tree.
+
+for every new request, kvindexer can return how many blocks match on each worker. this lets the router know which worker has the best prefix reuse.
+
+
+so is a good cache hit score enough to guarantee fast results? usually this cache match score alone is not enough because if it keeps hitting a single worker, it might get overloaded and end up being the bottleneck.
+
+so dynamo also sends metrics like -
+
+1. `num_requests_waiting` - pending requests.
+2. `gpu_cache_usage_perc` - gpu cache usage percentage.
+3. `gpu_prefix_cache_hit_rate` - gpu prefix cache hit rate.
+4. `request_active_slots` - active request slots.
+5. `request_total_slots` - total request slots.
+6. `kv_active_blocks` - active kv block count.
+7. `kv_total_blocks` - total kv block count.
+
+kvmetricsaggregator receives these metrics and aggregates them by worker.
+
+so a revised flow for how kv router chooses the worker for each request is -
+
+1. receive incoming request tokens.
+2. ask kvindexer which workers have matching kv blocks.
+3. ask kvmetricsaggregator for current worker metrics.
+4. score each worker with a cost function.
+5. pick the best worker.
+6. sends the request.
+
+
+whats this router cost function?
+
+the kv routing decision is based on a simple cost function.
+
+logit = kv_overlap_score_weight * potential_prefill_blocks + potential_active_blocks
+
+
+lower logit is better(less computational cost).
+
+- `potential_prefill_blocks` = the number of kv blocks that would have to be newly computed if this request were sent to that worker.
+smaller is better because it means more of the prefix already exists in the kv cache. so a good kv overlap reduces this number.
+- `potential_active_blocks` = blocks already active on that worker, so this is a load signal.
+- `kv_overlap_score_weight` controls whether we care more about ttft or itl.
+
+if -
+1. `kv_overlap_score_weight > 1.0`. the cache overlap term dominates and this prioritizes workers with better kv cache overlap. this automatically results in lower ttft.
+2. `kv_overlap_score_weight < 1.0` this spreads decode load more evenly and prefers less busy gpu. this results in a faster ITL.
