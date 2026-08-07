@@ -258,3 +258,69 @@ smaller is better because it means more of the prefix already exists in the kv c
 if -
 1. `kv_overlap_score_weight > 1.0`. the cache overlap term dominates and this prioritizes workers with better kv cache overlap. this automatically results in lower ttft.
 2. `kv_overlap_score_weight < 1.0` this spreads decode load more evenly and prefers less busy gpu. this results in a faster ITL.
+
+
+### sla planner
+
+sla planner is dynamo's autoscaling system.
+
+there are some terms you should know before reading into the sla planner.
+1. ttft = time to first token.
+2. itl / tpot = inter token latency / time per output token.
+3. isl = input sequence length.
+4. osl = output sequence length.
+
+what can i do with sla planner?
+- scale prefill and decode workers to meet specific ttft and itl requirements.
+- it uses performance models/profiling data instead of only reacting after overload.
+- also helps to minimize gpu count while meeting the service target.
+
+
+planner modes
+
+dynamo has multiple planner targets -
+
+1. throughput - this is the default and the recommended mode btw. it sets thresholds on the request queue depth and kv cache utilization and scales up and down depending on this. it is very easy to use since it needs no profiling data or any estimates to get it working. really useful when you want high gpu utilization and good throughput.
+2. latency - this is for latency sensitive workloads where we use more aggresive thresholds to scale.
+3. load - this uses user defined thresholds to control queue and kv threshold.
+4. sla - this is the mode that tries to meet any specific specific targets you might have for ttft and itl. it makes use of a combination of profiling estimates, live metrics and so on to come up with the final prefill decode estimates. 
+
+
+
+correction factors
+
+even though profiling gives ideal estimates but production is still quite messy.
+
+some examples are - 
+- requests may arrive all at once and queue.
+- prefix cache hit rate can reduce actual prefill work.
+- small chunked prefills can interfere with decode.
+- average isl / osl can hide high variance traffic.
+
+so planner has to take all this into account as well by comparing actual vs expected, something like this.
+
+prefill_correction = actual_ttft / expected_ttft
+decode_correction = actual_itl / expected_itl
+
+
+it then uses these correction factors to make better estimates.
+
+nixl
+
+nixl is actually what makes prefill decode separation efficient since even if we seperate the compute, we still need to find a really efficient way to do kv transfer. if you transfer kv cache the normal way, it will slowly eat away at the ttft. nixl on the other hand transfers kv cache directly between memory locations and is non blocking, which means the gpus can continue useful work while transfer is happening.
+
+
+lemme close this section with some thoughts on why kv cache does not always become the bottleneck.
+
+consider long inputs for instance -
+1. the attention compute is growing roughly n^2.
+2. kv cache size on the other hand grows only roughly n.
+
+so as long the context length grows, the compute will always overshadow the kv transfer cost.
+
+
+some more pointers on how to think about bigger model.
+1. bigger models usually mean more attention heads and more compute.
+2. besides kv cache growth can be controlled by grouped query attention and mla which reduce the number of kv heads compared to query heads.
+
+this ensures the kv cache size does not necessarily grow linearly with every model dimension and keeps the kv cache transfer bounded enough that gpus can make pd disagg practical.
