@@ -324,3 +324,105 @@ some more pointers on how to think about bigger model.
 2. besides kv cache growth can be controlled by grouped query attention and mla which reduce the number of kv heads compared to query heads.
 
 this ensures the kv cache size does not necessarily grow linearly with every model dimension and keeps the kv cache transfer bounded enough that gpus can make pd disagg practical.
+
+
+### fault tolerance
+
+dynamo has fault tolerance for both requests and workers.
+
+main ideas -
+
+1. request migration.
+2. request cancellation.
+3. graceful shutdown.
+4. request rejection / load shedding.
+5. health checks.
+
+
+1. request migration
+
+request migration lets a request continue on another worker when the original worker fails.
+
+two cases -
+
+1. new request migration.
+    worker is unreachable during initial connection.
+    frontend retries another worker because generation has not started yet.
+2. ongoing request migration.
+    stream breaks during generation.
+    frontend keeps accumulated tokens, reconstructs the request on another worker, and continues from that state.
+
+config -
+
+```bash
+python3 -m dynamo.frontend --migration-limit 3
+```
+
+default is usually no migration unless configured.
+
+
+2. request cancellation
+
+request cancellation stops work that no longer matters.
+
+example -
+
+- client disconnects from http stream.
+- frontend cancels downstream worker requests.
+- worker can stop generating and free compute.
+
+this matters because llm generation is expensive and useless if nobody is reading the response.
+
+
+3. graceful shutdown
+
+graceful shutdown makes restarts safer.
+
+flow -
+
+1. stop advertising endpoints / stop accepting new requests.
+2. keep processing in-flight requests for a grace period.
+3. invalidate endpoints.
+4. clean up engines, connections, and temp files.
+5. exit cleanly so kubernetes can restart or remove the pod.
+
+kubernetes config -
+
+```yaml
+extraPodSpec:
+  terminationGracePeriodSeconds: 60
+```
+
+rule of thumb -
+
+- short requests can use shorter grace periods.
+- long generation or high utilization needs longer grace periods.
+
+
+4. request rejection
+
+request rejection is load shedding.
+
+if workers are overloaded, new requests get rejected instead of making the whole system worse.
+
+prevents -
+
+1. cascading failures.
+2. every request getting worse latency.
+3. gpu worker oom.
+
+when all workers are busy, frontend can return http 503 so clients retry later.
+
+example thresholds -
+
+```bash
+python -m dynamo.frontend \
+  --active-decode-blocks-threshold 0.85 \
+  --active-prefill-tokens-threshold 10000
+```
+
+meaning -
+
+- if decode kv block utilization is too high, worker is busy.
+- if active prefill tokens are too high, worker is busy.
+- router avoids busy workers.
