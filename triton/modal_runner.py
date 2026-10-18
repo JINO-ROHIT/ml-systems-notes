@@ -15,7 +15,7 @@ GPU = os.environ.get('MODAL_GPU', 'L4')
 image = (
     modal.Image.debian_slim(python_version='3.12')
     .pip_install('torch==2.9.1', index_url='https://download.pytorch.org/whl/cu128')
-    .pip_install('numpy==2.2.6', 'matplotlib==3.10.3', 'pandas==2.2.3')
+    .pip_install('numpy==2.2.6', 'matplotlib==3.10.3', 'pandas==2.2.3', 'pytest')
     .add_local_dir(
         LOCAL_DIR,
         remote_path=str(REMOTE_DIR),
